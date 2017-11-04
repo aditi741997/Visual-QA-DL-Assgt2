@@ -15,15 +15,17 @@ class VQABaseline(nn.Module):
 		super(VQABaseline, self).__init__()
 
 		if GPU:
-			print "Using GPU"
+			print "Using GPU" 
 			self.dtype = torch.cuda.FloatTensor
 		else:
 			self.dtype = torch.FloatTensor
 
 		self.image_conv1 = nn.Conv2d(3, o[0], k[0], s[0])
 		self.image_conv2 = nn.Conv2d(o[0], o[1], k[1], s[1])
+		self.image_conv3 = nn.Conv2d(o[1], o[2], k[2], s[2])
 
 		self.ques_lstm1 = nn.LSTM(word_embedding_dim, hid[0], num_layers=1, bidirectional=False, batch_first=True)
+		self.ques_lstm2 = nn.LSTM(hid[0], hid[1], num_layers=1, bidirectional=False, batch_first=True)
 
 
 def get_arguments():
