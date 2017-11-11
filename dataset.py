@@ -1,6 +1,7 @@
 import os
 import re 
 import json
+import torch
 import pickle
 import numpy as np
 from scipy import misc
@@ -8,63 +9,73 @@ from torch.utils.data import Dataset
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
-  def __init__(self, path, loc):
+  def __init__(self, path, loc, batch_size):
     """Store question list and top 999 answers"""
     self.loc = loc
     self.image_path = os.path.join(path, loc)
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict() 
     self.qa_map = dict()
-    self.vocab_answer = pickle.load(open("top1000_answers.pkl", "r"))
+    vocab_answer = pickle.load(open("top1000_answers.pkl", "r"))
 
     with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
       q_json = json.loads(f.read())
-      self.q_list = q_json["questions"]
+      q_list = q_json["questions"]
+      len_wise_list = [[] for _ in xrange(2, 23)]
+      for x in q_list:
+        x["question"] = re.sub("[,.?]", "", x["question"]).split()
+        len_wise_list[len(x["question"]) - 2].append(x)
+      self.batches = []
+      for len_list in len_wise_list:
+        for i in xrange(0, len(len_list), batch_size):
+          self.batches.append(len_list[i:i+batch_size])
+    
     with open(os.path.join(path, "v2_mscoco_{}_annotations.json".format(loc)), "r") as f:
       a_json = json.loads(f.read())
       for ans in a_json["annotations"]:
         q_id = ans["question_id"]
         ans = ans["multiple_choice_answer"]
-        self.qa_map[q_id] = self.vocab_answer[ans] if ans in self.vocab_answer else 0
-    # print "done init"
+        self.qa_map[q_id] = vocab_answer[ans] if ans in vocab_answer else 0
+    print "init dataset"
 
   def __len__(self):
-    return len(self.q_list)
-
-  def get_map_fn(self, mapping, default):
-    def map_fn(x):
-      return mapping[x] if x in mapping else default
-    return map_fn
+    return len(self.batches) 
 
   def __getitem__(self, i):
     """Return (image, question, answer_id)"""
-    q = self.q_list[i]
-    question = re.sub("[,.?]", "", q["question"]).split()
-    question = map(self.get_map_fn(self.vocab_question, np.zeros((300))), question)
-    question = np.array(question)
-    answer = self.qa_map[q["question_id"]]
-    image_path = os.path.join(self.image_path, "COCO_{}_{:012}.jpg".format(self.loc, q["image_id"]))
-    image_embedding = pickle.load(image_path)
-    image_embedding = np.array(image_embedding)
-    
-    # image = np.array(misc.imread(image_path), dtype=np.float32)
-    # image_embedding = np.zeros((100,100))
-    return (image_embedding, question, answer)
-
-def collate_fn(batch):
-  # Todo, aditi, batch it up
+    batch = self.batches[i]
+    image = []
+    question = []
+    answer = []
+    for q in batch:
+      image_path = os.path.join(self.image_path, "COCO_{}_{:012}.jpg".format(self.loc, q["image_id"]))
+      # TODO : Change this once we get the embedding for the images
+      # image.append(pickle.load(image_path))
+      image.append(np.zeros((100,100)))
+      map_fn = lambda x: self.vocab_question[x] if x in self.vocab_question else np.zeros((300))
+      question.append(map(map_fn, q["question"]))
+      answer.append(self.qa_map[q["question_id"]])
+    return (torch.FloatTensor(image), torch.FloatTensor(question), torch.LongTensor(answer))
 
 
 # For testing
 from torch.utils.data import DataLoader
+from collections import defaultdict
 if __name__ == '__main__':
   path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data"
-  dataset = VQA_Dataset(path, "train2014")
-  train_loader = DataLoader(dataset, batch_size=100, num_workers=1)
+  loc = "train2014"
+
+  # count = defaultdict(int)
+  # with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
+  #   q_json = json.loads(f.read())
+  #   q_list = q_json["questions"]
+  #   q_list.sort(key=lambda x: len(re.sub("[,.?]", "", x["question"]).split()))
+  #   for i in map(lambda x: len(re.sub("[,.?]", "", x["question"]).split()), q_list):
+  #     count[i] = (count[i] + 1)%150
+  #   print count
+
+  dataset = VQA_Dataset(path, loc, 100)
+  train_loader = DataLoader(dataset, num_workers=1, shuffle=True)
   for i, data in enumerate(train_loader):
     image, question, answer = data
-    print answer
-
-
-
-
+    print data
