@@ -52,17 +52,22 @@ class VQA_Dataset(Dataset):
       # TODO : Change this once we get the embedding for the images
       # image.append(pickle.load(image_path))
       image.append(np.zeros((100,100)))
-      map_fn = lambda x: self.vocab_question[x] if x in self.vocab_question else np.zeros((300))
+      map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
       question.append(map(map_fn, q["question"]))
       answer.append(self.qa_map[q["question_id"]])
-    return (torch.FloatTensor(image), torch.FloatTensor(question), torch.LongTensor(answer))
+    # print image
+    print "Len : ", len(question)
+    # print question[0]
+    # print answer
+    return (torch.FloatTensor(image), torch.Tensor(np.array(question)), torch.LongTensor(answer))
 
 
 # For testing
 from torch.utils.data import DataLoader
 from collections import defaultdict
 if __name__ == '__main__':
-  path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data"
+  # path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data"
+  path = "../Data"
   loc = "train2014"
 
   # count = defaultdict(int)
@@ -77,5 +82,7 @@ if __name__ == '__main__':
   dataset = VQA_Dataset(path, loc, 100)
   train_loader = DataLoader(dataset, num_workers=1, shuffle=True)
   for i, data in enumerate(train_loader):
-    image, question, answer = data
+    # image, question, answer = data[0], data[1], data[2]
+    print "DATA -----------> "
     print data
+    break
