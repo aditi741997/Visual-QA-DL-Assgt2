@@ -37,7 +37,7 @@ def get_vgg(folder):
         assert tuple(img_tensor.size()) == (3, 224, 224)
         try:
             img_vgg = vgg_model(autograd.Variable(torch.unsqueeze(img_tensor, dim=0), volatile=True))
-            postvgg_filename = "{}.dat".format(image_filename)
+            postvgg_filename = "{}.pkl".format(image_filename)
             postvgg_pathname = os.path.join(vgg_folder, postvgg_filename)
             pickle.dump(img_vgg.data.numpy(), open(postvgg_pathname, 'wb'))
             print('wrote the {}th image to the file {}'.format(index, postvgg_pathname))
@@ -48,4 +48,4 @@ def get_vgg(folder):
             if i == 3:
                 break
 
-get_vgg("../Data/train2014")
+get_vgg("/scratch/cse/btech/cs1140485/DL_Course_Data/train2014")
