@@ -42,6 +42,8 @@ def parse_annotation(file_path):
 		else:
 			print "Invalid"
 
+q_path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data/v2_OpenEnded_mscoco_val2014_questions.json"
+a_path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data/v2_mscoco_val2014_annotations.json"
 
-parse_ques("v2_OpenEnded_mscoco_val2014_questions.json")
-parse_annotation("v2_mscoco_val2014_annotations.json")
+parse_ques(q_path)
+parse_annotation(a_path)
