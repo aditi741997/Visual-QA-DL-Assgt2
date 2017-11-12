@@ -3,17 +3,18 @@ import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import torch.nn.functional as import torch.nn as nn
 import numpy as np
 import sys, nltk
 import os, argparse
 import time, random
 import torchvision.models as models
+import dataset
 
 word_embedding_dim = 300
 hidden_ques_dim = 512
 img_ques_dim = 1024
 linear_dim = 1000
+GPU = False
 
 class VQABaseline(nn.Module):
 	def __init__(self, hidden):
@@ -80,9 +81,10 @@ def train(net, no_epoch, data_loader, val_loader, test_loader):
 			batch_loss = loss(outputs, answers)
 			batch_loss.backward()
 			optimizer.step()
-			if i%100 == 0:
+			if i%100 == 1:
 				print "Batch #" + str(i) + " Done!"
 				print("[%d, %5d] current train accuracy : %.3f" %(epoch+1, i+1, train_right/float(train_total)))
+				break
 		t2 = time.time()
 		print "Epoch " + str(epoch) + " Done!"
 		
@@ -94,9 +96,16 @@ def get_arguments():
 	
 	# training
 	parser.add_argument("--n_epochs", type=int, default=2)
-	parser.add_argument("--batch_size", type=int, default=6)
+	parser.add_argument("--batch_size", type=int, default=150)
 
 	opts = parser.parse_args(sys.argv[1:])
 	return opts
 
+args = get_arguments()
+path = "/scratch/cse/btech/cs1140485/DL_Course_Data/"
 vqa = VQABaseline(hidden_ques_dim)
+train_data_loader = dataset.VQA_Dataset(path, "train2014", args.batch_size)
+val_data_loader = dataset.VQA_Dataset(path, "val2014", args.batch_size)
+test_data_loader = dataset.VQA_Dataset(path, "test2015", args.batch_size)
+
+train(vqa, args.n_epochs, train_data_loader, val_data_loader, test_data_loader)

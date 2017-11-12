@@ -51,7 +51,7 @@ class VQA_Dataset(Dataset):
       image_path = os.path.join(self.image_path, "COCO_{}_{:012}.jpg".format(self.loc, q["image_id"]))
       # TODO : Change this once we get the embedding for the images
       # image.append(pickle.load(image_path))
-      image.append(np.zeros((100,100)))
+      image.append(np.zeros((4096)))
       map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
       question.append(map(map_fn, q["question"]))
       answer.append(self.qa_map[q["question_id"]])
