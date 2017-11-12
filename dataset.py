@@ -14,7 +14,7 @@ class VQA_Dataset(Dataset):
     self.loc = loc
     self.image_path = os.path.join(path, loc)
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
-    # self.vocab_question = dict() 
+    # self.vocab_question = dict()
     self.qa_map = dict()
     vocab_answer = pickle.load(open("top1000_answers.pkl", "r"))
 
@@ -55,10 +55,21 @@ class VQA_Dataset(Dataset):
       map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
       question.append(map(map_fn, q["question"]))
       answer.append(self.qa_map[q["question_id"]])
-    # print image
-    print "Len : ", len(question)
-    # print question[0]
-    # print answer
+
+    print "Batch Len : ", len(question)
+    return (torch.FloatTensor(image), torch.Tensor(np.array(question)), torch.LongTensor(answer))
+
+class VQA_Dataset_Test(Dataset):
+  def __init__(self, path, loc, batch_size):
+    self.batch_size = batch_size
+
+  def __len__(self):
+    return 100
+
+  def __getitem__(self, i):
+    image = [np.zeros((4096)) for _ in range(self.batch_size)]
+    question = [[np.zeros((300)) for _ in range(20)] for _ in range(self.batch_size)]
+    answer = [0 for _ in range(self.batch_size)]
     return (torch.FloatTensor(image), torch.Tensor(np.array(question)), torch.LongTensor(answer))
 
 
@@ -66,20 +77,17 @@ class VQA_Dataset(Dataset):
 from torch.utils.data import DataLoader
 from collections import defaultdict
 if __name__ == '__main__':
-  # path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data"
-  path = "../Data"
+  # path = "../Data"
+  path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data"
   loc = "train2014"
 
-  # count = defaultdict(int)
-  # with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
-  #   q_json = json.loads(f.read())
-  #   q_list = q_json["questions"]
-  #   q_list.sort(key=lambda x: len(re.sub("[,.?]", "", x["question"]).split()))
-  #   for i in map(lambda x: len(re.sub("[,.?]", "", x["question"]).split()), q_list):
-  #     count[i] = (count[i] + 1)%150
-  #   print count
-
+  dataset2 = VQA_Dataset_Test(path, loc, 100)
+  i2,q2,a2 = dataset2[0]
+  print i2.size(), q2.size(), a2.size()
   dataset = VQA_Dataset(path, loc, 100)
+  i,q,a = dataset[0]
+  print i.size(), q.size(), a.size()
+
   train_loader = DataLoader(dataset, num_workers=1, shuffle=True)
   for i, data in enumerate(train_loader):
     # image, question, answer = data[0], data[1], data[2]
