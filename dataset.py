@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 from scipy import misc
 from torch.utils.data import Dataset
+from collections import defaultdict
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
@@ -21,14 +22,14 @@ class VQA_Dataset(Dataset):
     with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
       q_json = json.loads(f.read())
       q_list = q_json["questions"]
-      len_wise_list = [[] for _ in xrange(2, 23)]
+      len_wise_list = defaultdict(list)
       for x in q_list:
         x["question"] = re.sub("[,.?]", "", x["question"]).split()
         len_wise_list[len(x["question"]) - 2].append(x)
       self.batches = []
-      for len_list in len_wise_list:
-        for i in xrange(0, len(len_list), batch_size):
-          self.batches.append(len_list[i:i+batch_size])
+      for l in len_wise_list:
+        for i in xrange(0, len(len_wise_list[l]), batch_size):
+          self.batches.append(len_wise_list[l][i:i+batch_size])
     
     with open(os.path.join(path, "v2_mscoco_{}_annotations.json".format(loc)), "r") as f:
       a_json = json.loads(f.read())
@@ -79,10 +80,10 @@ if __name__ == '__main__':
   #     count[i] = (count[i] + 1)%150
   #   print count
 
-  dataset = VQA_Dataset(path, loc, 100)
-  train_loader = DataLoader(dataset, num_workers=1, shuffle=True)
-  for i, data in enumerate(train_loader):
-    # image, question, answer = data[0], data[1], data[2]
-    print "DATA -----------> "
-    print data
-    break
+  # dataset = VQA_Dataset(path, loc, 100)
+  # train_loader = DataLoader(dataset, num_workers=1, shuffle=True)
+  # for i, data in enumerate(train_loader):
+  #   # image, question, answer = data[0], data[1], data[2]
+  #   print "DATA -----------> "
+  #   print data
+  #   break

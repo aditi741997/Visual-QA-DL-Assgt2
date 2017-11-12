@@ -1,4 +1,5 @@
 import torch
+from torch.autograd import Variable
 import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,6 +27,7 @@ class VQABaseline(nn.Module):
 		else:
 			self.dtype = torch.FloatTensor
 
+		self.hidden = hidden
 		self.activn = "relu"
 		self.img_linear = nn.Linear(4096, img_ques_dim)
 		self.ques_lstm_1 = nn.LSTM(word_embedding_dim, hidden, num_layers=1, bidirectional=False, batch_first=True)
@@ -47,8 +49,8 @@ class VQABaseline(nn.Module):
 		images_final = self.actvn_func(self.img_linear(images))
 
 		batch_sz = questions.data.size()[0]
-		h0 = autograd.Variable(torch.randn(1, batch_sz, hidden))
-		c0 = autograd.Variable(torch.randn(1, batch_sz, hidden))
+		h0 = autograd.Variable(torch.randn(1, batch_sz, self.hidden))
+		c0 = autograd.Variable(torch.randn(1, batch_sz, self.hidden))
 		out_ques_1, (hidden_ques_1, c_ques_1) = self.ques_lstm_1(questions, (h0, c0))
 		out_ques_2, (hidden_ques_2, c_ques_2) = self.ques_lstm_2(out_ques_1, (h0, c0))
 		ques_linear_input = torch.cat([out_ques_1[-1], out_ques_2[-1], torch.squeeze(hidden_ques_1, dim=0), torch.squeeze(hidden_ques_2, dim=0)], dim=1)
@@ -62,7 +64,7 @@ class VQABaseline(nn.Module):
 
 def train(net, no_epoch, data_loader, val_loader, test_loader):
 	loss = nn.CrossEntropyLoss()
-	optimizer = optim.SGD(net.parameters())
+	optimizer = optim.SGD(net.parameters(), lr=0.0001)
 	for epoch in xrange(no_epoch):
 		t1 = time.time()
 		train_right = 0
