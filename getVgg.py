@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import torch
 import torch.autograd as autograd
 from torchvision import transforms, datasets
@@ -67,24 +66,24 @@ def get_vgg(folder, data_loader):
             filename = '{}_{}.dat'.format(batch_index, local_index)
             pathname = os.path.join(new_folder, filename)
             with open(os.path.join(new_folder, filename), 'wb') as fin:
-                pickle.dump(output_vector.data.numpy(), fin)
+                pickle.dump(output_vector.data.numpy(), fin, protocol = 2)
             print('written {}'.format(pathname))
 
 def depreciated(folder):
     vgg_folder = folder + "_vgg"
+    transformer = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Scale(256),
+        transforms.CenterCrop(224), 
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
     mistakes = 0
     batch = []
     filenames = []
     for index, image_filename in enumerate(os.listdir(folder)):
         try:
             image = io.imread(os.path.join(folder, image_filename))
-            transformer = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.Scale(256),
-                transforms.CenterCrop(224), 
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            ])
             img_tensor = torch.unsqueeze(transformer(image), dim=0)
             batch.append(img_tensor)
             filenames.append(image_filename)
@@ -95,24 +94,26 @@ def depreciated(folder):
                 filenames = []
             else:
                 continue
+            if torch.cuda.is_available():
+                input_batch = input_batch.cuda()
             outputs = vgg_model(autograd.Variable(input_batch, volatile=True))
             for local_index, output_vector in enumerate(outputs.chunk(BATCH_SIZE, dim = 0)):
                 filename = '{}.pkl'.format(input_filenames[local_index])
                 pathname = os.path.join(vgg_folder, filename)
                 with open(pathname, 'wb') as fin:
-                    pickle.dump(output_vector.data.numpy(), fin)
+                    pickle.dump(output_vector.data.numpy(), fin, protocol=2)
                 print('written {}'.format(pathname))
         except Exception as ex:
             print("Screwup @ {}  -------------------- ".format(image_filename))
             print(ex)
             mistakes += 1
             if False and mistakes == 3: break
-        print('mistakes = {}', mistakes)
+    print('mistakes = {}', mistakes)
 
 if __name__ == '__main__':
-    print("Please set folder correctly")
-    folder = "../Data/train2014"
+    if torch.cuda.is_available():
+        vgg_model = vgg_model.cuda()
     # data_loader = take_input(data_folder = folder)
     # get_vgg(folder = folder, data_loader = data_loader)
-    depreciated(folder = folder)
+    depreciated(folder="../Data/train2014")
     # get_vgg("/scratch/cse/btech/cs1140485/DL_Course_Data/train2014")
