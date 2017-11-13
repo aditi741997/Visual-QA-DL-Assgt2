@@ -31,7 +31,7 @@ class VQA_Baseline(nn.Module):
 		self.final_linear_1 = nn.Linear(img_ques_dim, linear_dim)
 		self.final_linear_2 = nn.Linear(linear_dim, 1000)
 
-		is_cuda = next(self.parameters()).is_cuda
+		is_cuda = torch.cuda.is_available()
 		self.type = torch.cuda.FloatTensor if is_cuda else torch.FloatTensor
 
 	def actvn_func(self, x):
@@ -54,14 +54,12 @@ class VQA_Baseline(nn.Module):
 				logits over 1000 most frequent asnwers
 		"""
 		images_final = self.actvn_func(self.img_linear(images))
-
 		b = questions.data.size(0)
 		h0, h1, c0, c1 = self.init_h(b), self.init_h(b), self.init_h(b), self.init_h(b)
 		out_ques_0, (hidden_ques_0, c_ques_0) = self.ques_lstm_1(questions, (h0, c0))
 		out_ques_1, (hidden_ques_1, c_ques_1) = self.ques_lstm_2(out_ques_0, (h1, c1))
 		hidden_ques_0 = torch.squeeze(hidden_ques_0, dim=0)
 		hidden_ques_1 = torch.squeeze(hidden_ques_1, dim=0)
-
 		ques_linear_input = torch.cat([out_ques_0[:, -1, :], out_ques_1[:, -1, :], hidden_ques_0, hidden_ques_1], dim=1)
 		questions_final = self.actvn_func(self.ques_linear(ques_linear_input))
 

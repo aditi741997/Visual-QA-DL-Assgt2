@@ -16,7 +16,7 @@ from vqa_base import VQA_Baseline
 path = "/scratch/cse/btech/cs1140485/DL_Course_Data/"
 # path = "/Users/Shreyan/Desktop/Datasets/DL_Course_Data/"
 GPU = torch.cuda.is_available()
-validation_batch_limit = 20
+validation_batch_limit = 500
 
 def process_data(data):
   images, questions, answers = data
@@ -36,8 +36,12 @@ def get_accuracy(model, dataloader):
     images, questions, answers = process_data(data)
     outputs = model(images, questions)
     _, predicts = torch.max(outputs, 1)
-    total += predicts.size(0)
-    right += (predicts == answers).sum().data[0]
+    try:
+    	assert(predicts.size(0) == answers.size(0))
+    	total += predicts.size(0)
+    	right += (predicts == answers).sum().data[0]
+    except Exception as ex:
+	print ex
     unknown += len(answers[answers == -1])
     if i == validation_batch_limit:
       break
@@ -47,7 +51,7 @@ def get_accuracy(model, dataloader):
 def train(model, args, train_dataset, test_dataset):
   # Dataloaders
   train_dataloader = DataLoader(train_dataset, shuffle=True, num_workers=args.num_workers)
-  test_dataloader = DataLoader(test_dataset, num_workers=args.num_workers)
+  test_dataloader = DataLoader(test_dataset, shuffle=True, num_workers=args.num_workers)
 
   # Loss fn, optimizer, scheduler
   loss = nn.CrossEntropyLoss(ignore_index=-1)
@@ -77,15 +81,15 @@ def train(model, args, train_dataset, test_dataset):
       batch_loss = loss(outputs, answers)
       batch_loss.backward()
       optimizer.step()
-      if i == 10:
-        break
+      if i == 50:
+	break
     t2 = time.time()
     log = "Epoch {}, train_acc {}, test_acc {}, reduced_train_acc {}, reduced_test_acc {}, time {}".format(
       epoch, 
       100.0*train_right/train_total, 
       100.0*test_right/test_total, 
-      100.0*(train_right-train_unknown)/(train_total-train_unknown), 
-      100.0*(test_right-test_unknown)/(test_total-test_unknown), 
+      100.0*(train_right)/(train_total-train_unknown), 
+      100.0*(test_right)/(test_total-test_unknown), 
       t2-t1)
     args.log.write(log+"\n")
     args.log.flush()
@@ -103,9 +107,9 @@ def get_arguments():
   parser.add_argument("--momentum", type=float, default=0.9)
   parser.add_argument("--weight-decay", type=float, default=0.98)
 
-  parser.add_argument("--num-epoch", type=int, default=200)
-  parser.add_argument("--batch-size", type=int, default=150)
-  parser.add_argument("--num-workers", type=int, default=4)
+  parser.add_argument("--num-epoch", type=int, default=50)
+  parser.add_argument("--batch-size", type=int, default=256)
+  parser.add_argument("--num-workers", type=int, default=32)
 
   parser.add_argument("--model-save-path", type=str, default="model.pth")
   parser.add_argument("--log", type=str, default="log.txt")
@@ -117,11 +121,9 @@ def get_arguments():
 
 def main(args):
   model = VQA_Baseline(args.question_hidden_dim, args.activation_fn)
-  train_dataset = VQA_Dataset_Test(path, "train2014", args.batch_size)
-  val_dataset = VQA_Dataset_Test(path, "val2014", args.batch_size)
-  test_dataset = VQA_Dataset_Test(path, "test2015", args.batch_size)
-  merged_dataset = ConcatDataset([train_dataset, val_dataset])
-  train(model, args, merged_dataset, test_dataset)
+  train_dataset = VQA_Dataset(path, "train2014", args.batch_size)
+  val_dataset = VQA_Dataset(path, "val2014", args.batch_size)
+  train(model, args, train_dataset, val_dataset)
 
 if __name__ == '__main__':
   args = get_arguments()

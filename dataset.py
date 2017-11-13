@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 from scipy import misc
 from torch.utils.data import Dataset
+from collections import defaultdict
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
@@ -21,15 +22,15 @@ class VQA_Dataset(Dataset):
     with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
       q_json = json.loads(f.read())
       q_list = q_json["questions"]
-      len_wise_list = [[] for _ in xrange(2, 23)]
+      len_wise_list = defaultdict(list)
+      #len_wise_list = [[] for _ in xrange(2, 23)]
       for x in q_list:
         x["question"] = re.sub("[,.?]", "", x["question"]).split()
-        len_wise_list[len(x["question"]) - 2].append(x)
+        len_wise_list[len(x["question"])].append(x)
       self.batches = []
-      for len_list in len_wise_list:
-        for i in xrange(0, len(len_list), batch_size):
-          self.batches.append(len_list[i:i+batch_size])
-    
+      for k in len_wise_list:
+        for i in xrange(0, len(len_wise_list[k]), batch_size):
+          self.batches.append(len_wise_list[k][i:i+batch_size])    
     with open(os.path.join(path, "v2_mscoco_{}_annotations.json".format(loc)), "r") as f:
       a_json = json.loads(f.read())
       for ans in a_json["annotations"]:
@@ -48,17 +49,17 @@ class VQA_Dataset(Dataset):
     question = []
     answer = []
     for q in batch:
-      image_path = os.path.join(self.image_path, "COCO_{}_{:012}.jpg".format(self.loc, q["image_id"]))
+      image_path = os.path.join(self.image_path, "COCO_{}_{:012}.jpg.pkl".format(self.loc, q["image_id"]))
       if not os.path.isfile(image_path):
         print("File not found: "+image_path)
         continue
-      image.append(pickle.load(open(image_path, "r")))
+      image.append(pickle.load(open(image_path, "r"))[0])
       map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
       question.append(map(map_fn, q["question"]))
       answer.append(self.qa_map[q["question_id"]])
 
-    print "Batch Len : ", len(question)
-    return (torch.FloatTensor(image), torch.Tensor(np.array(question)), torch.LongTensor(answer))
+    #print "Batch Len : ", len(question)
+    return (np.array(image), np.array(question, dtype=np.float32), np.array(answer))
 
 class VQA_Dataset_Test(Dataset):
   def __init__(self, path, loc, batch_size):
@@ -68,9 +69,9 @@ class VQA_Dataset_Test(Dataset):
     return 100
 
   def __getitem__(self, i):
-    image = [np.zeros((4096)) for _ in range(self.batch_size)]
-    question = [[np.zeros((300)) for _ in range(20)] for _ in range(self.batch_size)]
-    answer = [0 for _ in range(self.batch_size)]
+    image = [np.ones((4096)) for _ in range(self.batch_size)]
+    question = [[np.ones((300)) for _ in range(20)] for _ in range(self.batch_size)]
+    answer = [1 for _ in range(self.batch_size)]
     return (torch.FloatTensor(image), torch.Tensor(np.array(question)), torch.LongTensor(answer))
 
 
