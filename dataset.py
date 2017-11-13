@@ -12,7 +12,7 @@ class VQA_Dataset(Dataset):
   def __init__(self, path, loc, batch_size):
     """Store question list and top 999 answers"""
     self.loc = loc
-    self.image_path = os.path.join(path, loc)
+    self.image_path = os.path.join(path, loc+"_vgg")
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict()
     self.qa_map = dict()
@@ -35,7 +35,7 @@ class VQA_Dataset(Dataset):
       for ans in a_json["annotations"]:
         q_id = ans["question_id"]
         ans = ans["multiple_choice_answer"]
-        self.qa_map[q_id] = vocab_answer[ans] if ans in vocab_answer else 0
+        self.qa_map[q_id] = vocab_answer[ans] if ans in vocab_answer else -1
     print "init dataset"
 
   def __len__(self):
@@ -49,9 +49,10 @@ class VQA_Dataset(Dataset):
     answer = []
     for q in batch:
       image_path = os.path.join(self.image_path, "COCO_{}_{:012}.jpg".format(self.loc, q["image_id"]))
-      # TODO : Change this once we get the embedding for the images
-      # image.append(pickle.load(image_path))
-      image.append(np.zeros((4096)))
+      if not os.path.isfile(image_path):
+        print("File not found: "+image_path)
+        continue
+      image.append(pickle.load(open(image_path, "r")))
       map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
       question.append(map(map_fn, q["question"]))
       answer.append(self.qa_map[q["question_id"]])
