@@ -49,7 +49,7 @@ def get_accuracy(model, dataloader):
   return right, total, unknown, time.time()-t1
 
 def train(model, args, train_dataset, test_dataset):
-  log = "lr {} mtm {} decay activation {} save_path {}".format(args.learning_rate, args.momentum, args.weight_decay, args.activation_fn, args.model_save_path)
+  log = "lr {}, mtm {}, wt decay {}, gamma {}, activation {}, save_path {}".format(args.learning_rate, args.momentum, args.weight_decay, args.gamma, args.activation_fn, args.model_save_path)
   if args.model_load_path:
     log += "\nLoad model from"+args.model_load_path
   print log
@@ -60,8 +60,8 @@ def train(model, args, train_dataset, test_dataset):
 
   # Loss fn, optimizer, scheduler
   loss = nn.CrossEntropyLoss(ignore_index=-1)
-  optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum)
-  scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=args.weight_decay)
+  optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
+  scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=args.gamma)
 
   if GPU:
     model = model.cuda()
@@ -112,7 +112,8 @@ def get_arguments():
 
   parser.add_argument("--learning-rate", type=float, default=0.01)
   parser.add_argument("--momentum", type=float, default=0.9)
-  parser.add_argument("--weight-decay", type=float, default=0.93)
+  parser.add_argument("--weight-decay", type=float, default=0.001)
+  parser.add_argument("--gamma", type=float, default=0.96)
 
   parser.add_argument("--num-epoch", type=int, default=100)
   parser.add_argument("--batch-size", type=int, default=256)

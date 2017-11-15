@@ -29,7 +29,7 @@ class VQA_Baseline(nn.Module):
 		self.ques_linear = nn.Linear(2048, img_ques_dim)
 
 		self.final_linear_1 = nn.Linear(img_ques_dim, linear_dim)
-		self.final_linear_2 = nn.Linear(linear_dim, 1000)
+		self.final_linear_2 = nn.Linear(linear_dim, 1000)		
 
 		is_cuda = torch.cuda.is_available()
 		self.type = torch.cuda.FloatTensor if is_cuda else torch.FloatTensor
