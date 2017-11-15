@@ -37,18 +37,23 @@ def get_accuracy(model, dataloader):
     outputs = model(images, questions)
     _, predicts = torch.max(outputs, 1)
     try:
-    	assert(predicts.size(0) == answers.size(0))
-    	total += predicts.size(0)
-    	right += (predicts == answers).sum().data[0]
+      assert(predicts.size(0) == answers.size(0))
+      total += predicts.size(0)
+      right += (predicts == answers).sum().data[0]
     except Exception as ex:
-	print ex
+      print ex
     unknown += len(answers[answers == -1])
     if i == validation_batch_limit:
       break
   print("Validation Time {}".format(time.time()-t1))
-  return right, total, unknown
+  return right, total, unknown, time.time()-t1
 
 def train(model, args, train_dataset, test_dataset):
+  log = "lr {} mtm {} decay activation {} save_path {}".format(args.learning_rate, args.momentum, args.weight_decay, args.activation_fn, args.model_save_path)
+  if args.model_load_path:
+    log += "\nLoad model from"+args.model_load_path
+  print log
+  args.log.write(log+"\n")
   # Dataloaders
   train_dataloader = DataLoader(train_dataset, shuffle=True, num_workers=args.num_workers)
   test_dataloader = DataLoader(test_dataset, shuffle=True, num_workers=args.num_workers)
@@ -62,11 +67,12 @@ def train(model, args, train_dataset, test_dataset):
     model = model.cuda()
 
   for epoch in xrange(args.num_epoch):
-    test_right, test_total, test_unknown = get_accuracy(model, test_dataloader)
+    test_right, test_total, test_unknown, test_time = get_accuracy(model, test_dataloader)
     t1 = time.time()
     scheduler.step()
     torch.save(model, args.model_save_path)
     train_right, train_total, train_unknown = 0, 0, 0
+    total_loss = 0
     for i, data in enumerate(train_dataloader):
       # this is a batch of image-question pairs.
       images, questions, answers = process_data(data)
@@ -79,18 +85,19 @@ def train(model, args, train_dataset, test_dataset):
       
       optimizer.zero_grad()
       batch_loss = loss(outputs, answers)
+      total_loss += batch_loss.data[0]
       batch_loss.backward()
       optimizer.step()
-      if i == 50:
-	break
     t2 = time.time()
-    log = "Epoch {}, train_acc {}, test_acc {}, reduced_train_acc {}, reduced_test_acc {}, time {}".format(
+    log = "Epoch {}, loss {}, train_acc {}, test_acc {}, reduced_train_acc {}, reduced_test_acc {}, time {}, test_time {}".format(
       epoch, 
+      total_loss,
       100.0*train_right/train_total, 
       100.0*test_right/test_total, 
       100.0*(train_right)/(train_total-train_unknown), 
       100.0*(test_right)/(test_total-test_unknown), 
-      t2-t1)
+      t2-t1,
+      test_time)
     args.log.write(log+"\n")
     args.log.flush()
     print(log)
@@ -105,13 +112,14 @@ def get_arguments():
 
   parser.add_argument("--learning-rate", type=float, default=0.01)
   parser.add_argument("--momentum", type=float, default=0.9)
-  parser.add_argument("--weight-decay", type=float, default=0.98)
+  parser.add_argument("--weight-decay", type=float, default=0.93)
 
-  parser.add_argument("--num-epoch", type=int, default=50)
+  parser.add_argument("--num-epoch", type=int, default=100)
   parser.add_argument("--batch-size", type=int, default=256)
   parser.add_argument("--num-workers", type=int, default=32)
 
   parser.add_argument("--model-save-path", type=str, default="model.pth")
+  parser.add_argument("--model-load-path", type=str)
   parser.add_argument("--log", type=str, default="log.txt")
   args = parser.parse_args()
 
@@ -120,7 +128,10 @@ def get_arguments():
   return args
 
 def main(args):
-  model = VQA_Baseline(args.question_hidden_dim, args.activation_fn)
+  if args.model_load_path:
+    model = torch.load(args.model_load_path)
+  else:
+    model = VQA_Baseline(args.question_hidden_dim, args.activation_fn)
   train_dataset = VQA_Dataset(path, "train2014", args.batch_size)
   val_dataset = VQA_Dataset(path, "val2014", args.batch_size)
   train(model, args, train_dataset, val_dataset)
