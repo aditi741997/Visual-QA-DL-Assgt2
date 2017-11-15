@@ -13,6 +13,7 @@ class VQA_Dataset(Dataset):
   def __init__(self, path, loc, batch_size):
     """Store question list and top 999 answers"""
     self.loc = loc
+    self.image_embed_map = {}
     self.image_path = os.path.join(path, loc+"_vgg")
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict()
@@ -50,10 +51,15 @@ class VQA_Dataset(Dataset):
     answer = []
     for q in batch:
       image_path = os.path.join(self.image_path, "COCO_{}_{:012}.jpg.pkl".format(self.loc, q["image_id"]))
-      if not os.path.isfile(image_path):
+      if image_path in self.image_embed_map:
+        image.append(self.image_embed_map[image_path])
+      elif os.path.isfile(image_path):
+        img_embed = pickle.load(open(image_path, "r"))[0]
+        image.append(img_embed)
+        self.image_embed_map[image_path] = img_embed
+      else: 
         print("File not found: "+image_path)
         continue
-      image.append(pickle.load(open(image_path, "r"))[0])
       map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
       question.append(map(map_fn, q["question"]))
       answer.append(self.qa_map[q["question_id"]])

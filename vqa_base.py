@@ -53,7 +53,7 @@ class VQA_Baseline(nn.Module):
 			Return:
 				logits over 1000 most frequent asnwers
 		"""
-		images_final = self.actvn_func(self.img_linear(images))
+		images_final = F.dropout(self.actvn_func(self.img_linear(images)))
 		b = questions.data.size(0)
 		h0, h1, c0, c1 = self.init_h(b), self.init_h(b), self.init_h(b), self.init_h(b)
 		out_ques_0, (hidden_ques_0, c_ques_0) = self.ques_lstm_1(questions, (h0, c0))
@@ -61,7 +61,7 @@ class VQA_Baseline(nn.Module):
 		hidden_ques_0 = torch.squeeze(hidden_ques_0, dim=0)
 		hidden_ques_1 = torch.squeeze(hidden_ques_1, dim=0)
 		ques_linear_input = torch.cat([out_ques_0[:, -1, :], out_ques_1[:, -1, :], hidden_ques_0, hidden_ques_1], dim=1)
-		questions_final = self.actvn_func(self.ques_linear(ques_linear_input))
+		questions_final = F.dropout(self.actvn_func(self.ques_linear(ques_linear_input)))
 
 		img_ques_dot = images_final * questions_final
 		img_ques_dot = F.dropout(self.actvn_func(self.final_linear_1(img_ques_dot)))
