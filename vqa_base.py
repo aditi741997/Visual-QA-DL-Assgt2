@@ -14,7 +14,7 @@ class VQA_Baseline(nn.Module):
 		Takes 300 dim embedding of question from glove
 		Returns logit over 1000 most frequent answers
 	"""
-	def __init__(self, hidden_size, activation_fn):
+	def __init__(self, hidden_size, activation_fn, gru):
 		"""Args
 			hidden_size : size of hidden dim of LSTM
 			activation_fn : one of "relu" or "tanh"
@@ -24,8 +24,13 @@ class VQA_Baseline(nn.Module):
 		self.activation_fn = activation_fn
 		self.hidden_size = hidden_size
 		self.img_linear = nn.Linear(4096, img_ques_dim)
-		self.ques_lstm_1 = nn.LSTM(300, hidden_size, num_layers=1, batch_first=True)
-		self.ques_lstm_2 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
+		self.cell_type = gru
+		if self.cell_type == "gru":
+			self.ques_rec_1 = nn.GRU(300, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rec_2 = nn.GRU(hidden_size, hidden_size, num_layers=1, batch_first=True)
+		else:
+			self.ques_rec_1 = nn.LSTM(300, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rec_2 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
 		self.ques_linear = nn.Linear(2048, img_ques_dim)
 
 		self.final_linear_1 = nn.Linear(img_ques_dim, linear_dim)
@@ -56,8 +61,12 @@ class VQA_Baseline(nn.Module):
 		images_final = F.dropout(self.actvn_func(self.img_linear(images)))
 		b = questions.data.size(0)
 		h0, h1, c0, c1 = self.init_h(b), self.init_h(b), self.init_h(b), self.init_h(b)
-		out_ques_0, (hidden_ques_0, c_ques_0) = self.ques_lstm_1(questions, (h0, c0))
-		out_ques_1, (hidden_ques_1, c_ques_1) = self.ques_lstm_2(out_ques_0, (h1, c1))
+		if self.cell_type == "gru":
+			out_ques_0, hidden_ques_0 = self.ques_rnn_1(questions, h0)
+			out_ques_1, hidden_ques_1 = self.ques_rnn_2(out_ques_0, h1)
+		else:
+			out_ques_0, (hidden_ques_0, c_ques_0) = self.ques_rnn_1(questions, (h0, c0))
+			out_ques_1, (hidden_ques_1, c_ques_1) = self.ques_rnn_2(out_ques_0, (h1, c1))
 		hidden_ques_0 = torch.squeeze(hidden_ques_0, dim=0)
 		hidden_ques_1 = torch.squeeze(hidden_ques_1, dim=0)
 		ques_linear_input = torch.cat([out_ques_0[:, -1, :], out_ques_1[:, -1, :], hidden_ques_0, hidden_ques_1], dim=1)

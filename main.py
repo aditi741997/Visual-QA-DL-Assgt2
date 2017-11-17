@@ -107,13 +107,14 @@ def train(model, args, train_dataset, test_dataset):
 def get_arguments():
   # ques params
   parser = argparse.ArgumentParser(description='VQA_Base')
-  parser.add_argument("--activation-fn", type=str, default="relu")
+  parser.add_argument("--activation-fn", type=str, default="tanh")
   parser.add_argument("--question-hidden-dim", type=int, default=512)
 
   parser.add_argument("--learning-rate", type=float, default=0.01)
   parser.add_argument("--momentum", type=float, default=0.9)
   parser.add_argument("--weight-decay", type=float, default=0.001)
   parser.add_argument("--gamma", type=float, default=0.96)
+  parser.add_argument("--cell-type", type=str, default="lstm")
 
   parser.add_argument("--num-epoch", type=int, default=100)
   parser.add_argument("--batch-size", type=int, default=256)
@@ -132,7 +133,7 @@ def main(args):
   if args.model_load_path:
     model = torch.load(args.model_load_path)
   else:
-    model = VQA_Baseline(args.question_hidden_dim, args.activation_fn)
+    model = VQA_Baseline(args.question_hidden_dim, args.activation_fn, args.cell_type)
   train_dataset = VQA_Dataset(path, "train2014", args.batch_size)
   val_dataset = VQA_Dataset(path, "val2014", args.batch_size)
   train(model, args, train_dataset, val_dataset)
