@@ -82,7 +82,6 @@ def train(model, args, train_dataset, test_dataset):
       train_total += predicts.size(0)
       train_right += (predicts == answers).sum().data[0]
       train_unknown += len(answers[answers == -1])
-      
       optimizer.zero_grad()
       batch_loss = loss(outputs, answers)
       total_loss += batch_loss.data[0]

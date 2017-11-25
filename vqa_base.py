@@ -6,6 +6,7 @@ from torch.autograd import Variable
 # Global variables
 img_ques_dim = 1024
 linear_dim = 1000
+no_answers = 2000
 
 class VQA_Baseline(nn.Module):
 	"""
@@ -26,15 +27,15 @@ class VQA_Baseline(nn.Module):
 		self.img_linear = nn.Linear(4096, img_ques_dim)
 		self.cell_type = gru
 		if self.cell_type == "gru":
-			self.ques_rec_1 = nn.GRU(300, hidden_size, num_layers=1, batch_first=True)
-			self.ques_rec_2 = nn.GRU(hidden_size, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rnn_1 = nn.GRU(300, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rnn_2 = nn.GRU(hidden_size, hidden_size, num_layers=1, batch_first=True)
 		else:
-			self.ques_rec_1 = nn.LSTM(300, hidden_size, num_layers=1, batch_first=True)
-			self.ques_rec_2 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rnn_1 = nn.LSTM(300, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rnn_2 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
 		self.ques_linear = nn.Linear(2048, img_ques_dim)
 
 		self.final_linear_1 = nn.Linear(img_ques_dim, linear_dim)
-		self.final_linear_2 = nn.Linear(linear_dim, 1000)		
+		self.final_linear_2 = nn.Linear(linear_dim, no_answers)		
 
 		is_cuda = torch.cuda.is_available()
 		self.type = torch.cuda.FloatTensor if is_cuda else torch.FloatTensor

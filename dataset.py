@@ -18,7 +18,8 @@ class VQA_Dataset(Dataset):
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict()
     self.qa_map = dict()
-    vocab_answer = pickle.load(open("top1000_answers.pkl", "r"))
+    vocab_answer = pickle.load(open("top2000_answers.pkl", "r"))
+    print("size of top 2000 : ", len(vocab_answer))
 
     with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
       q_json = json.loads(f.read())
