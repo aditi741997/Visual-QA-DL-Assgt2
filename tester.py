@@ -25,6 +25,7 @@ def main():
   dataset = VQA_Dataset(data_path, loc, batch_size)
   dataloader = DataLoader(dataset, num_workers=16)
   results_txt = "["
+  done_ques_set = set()
   out_file = open("/home/cse/btech/cs1140205/DL_Assgt2/new/" + "results_2.json", 'w')
   for i, data in enumerate(dataloader):
     images, questions, q_ids = process_data(data)
@@ -34,10 +35,21 @@ def main():
       result_obj = {}
       result_obj["question_id"] = q_ids.data[i]
       result_obj["answer"] = answer_map[predicts.data[i]]
+      done_ques_set.add(q_ids.data[i])
       results_txt += (json.dumps(result_obj)) + ","
     print "Batch ", i
   print "Done"
-  results_txt += "]"
+  with open(os.path.join(data_path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
+    q_json = json.loads(f.read())
+    q_list = q_json["questions"]
+    for x in q_list:
+      if x["question_id"] in done_q_set:
+        continue
+      result_obj = {}
+      result_obj["question_id"] = x["question_id"]
+      result_obj["answer"] = answer_map[1]
+      results_txt += (json.dumps(result_obj)) + ","
+  results_txt = results_txt[:-1] + "]"
   out_file.write(results_txt)
 
 
