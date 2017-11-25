@@ -10,7 +10,7 @@ from collections import defaultdict
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
-  def __init__(self, path, loc, batch_size):
+  def __init__(self, path, loc, batch_size, no_answers):
     """Store question list and top 999 answers"""
     self.loc = loc
     self.image_embed_map = {}
@@ -18,8 +18,8 @@ class VQA_Dataset(Dataset):
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict()
     self.qa_map = dict()
-    vocab_answer = pickle.load(open("top2000_answers.pkl", "r"))
-    print("size of top 2000 : ", len(vocab_answer))
+    vocab_answer = pickle.load(open("top" + str(no_answers) + "_answers.pkl", "r"))
+    print("size of top k : ", len(vocab_answer))
 
     with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
       q_json = json.loads(f.read())

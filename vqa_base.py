@@ -6,7 +6,6 @@ from torch.autograd import Variable
 # Global variables
 img_ques_dim = 1024
 linear_dim = 1000
-no_answers = 2000
 
 class VQA_Baseline(nn.Module):
 	"""
@@ -15,7 +14,7 @@ class VQA_Baseline(nn.Module):
 		Takes 300 dim embedding of question from glove
 		Returns logit over 1000 most frequent answers
 	"""
-	def __init__(self, hidden_size, activation_fn, gru):
+	def __init__(self, hidden_size, activation_fn, gru, no_answers, bidi=False):
 		"""Args
 			hidden_size : size of hidden dim of LSTM
 			activation_fn : one of "relu" or "tanh"
@@ -28,14 +27,14 @@ class VQA_Baseline(nn.Module):
 		self.cell_type = gru
 		if self.cell_type == "gru":
 			self.ques_rnn_1 = nn.GRU(300, hidden_size, num_layers=1, batch_first=True)
-			self.ques_rnn_2 = nn.GRU(hidden_size, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rnn_2 = nn.GRU(hidden_size, hidden_size, num_layers=1, batch_first=True, bidirectional=bidi)
 		else:
 			self.ques_rnn_1 = nn.LSTM(300, hidden_size, num_layers=1, batch_first=True)
-			self.ques_rnn_2 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True)
+			self.ques_rnn_2 = nn.LSTM(hidden_size, hidden_size, num_layers=1, batch_first=True, bidirectional=bidi)
 		self.ques_linear = nn.Linear(2048, img_ques_dim)
 
 		self.final_linear_1 = nn.Linear(img_ques_dim, linear_dim)
-		self.final_linear_2 = nn.Linear(linear_dim, no_answers)		
+		self.final_linear_2 = nn.Linear(linear_dim, no_answers)	
 
 		is_cuda = torch.cuda.is_available()
 		self.type = torch.cuda.FloatTensor if is_cuda else torch.FloatTensor

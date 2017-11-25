@@ -33,6 +33,8 @@ class VQA_Dataset(Dataset):
       for k in len_wise_list:
         for i in xrange(0, len(len_wise_list[k]), batch_size):
           self.batches.append(len_wise_list[k][i:i+batch_size])
+    if self.loc not in ["train2014", "val2014"]:
+      return
 
     with open(os.path.join(path, "v2_mscoco_{}_annotations.json".format(loc)), "r") as f:
       a_json = json.loads(f.read())
@@ -67,13 +69,19 @@ class VQA_Dataset(Dataset):
       image_path = os.path.join(raw_image_dir, "COCO_{}_{:012}.jpg".format(self.loc, q["image_id"]))
       if not os.path.isfile(image_path):
         print("File not found: "+ image_path)
-        continue
+        if self.loc not in ["train2014", "val2014"]:
+          image.append(torch.zeros(1, 3, 224, 224))
+        else:
+          continue
       current_image = io.imread(image_path)
       try:
         image.append(torch.unsqueeze(self.transform(current_image), dim=0))
         map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
         question.append(map(map_fn, q["question"]))
-        answer.append(self.qa_map[q["question_id"]])
+        if self.loc not in ["train2014", "val2014"]:
+          answer.append(q["question_id"])
+        else:
+          answer.append(self.qa_map[q["question_id"]])
       except Exception as e:
         print("Error", e)
         continue

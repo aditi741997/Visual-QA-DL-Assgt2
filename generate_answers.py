@@ -1,6 +1,7 @@
 import json
 import pickle
 
+# TO LOWER
 def get_topk(paths, no):
 	answers_count = {}
 	for file_path in paths:

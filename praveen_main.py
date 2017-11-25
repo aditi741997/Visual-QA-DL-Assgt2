@@ -115,23 +115,25 @@ def get_arguments():
   parser.add_argument("--num-attention-layers", type=int, default=1)
   parser.add_argument("--ans-vocab-size", type=int, default=1000)
 
-  parser.add_argument("--learning-rate", type=float, default=0.01)
+  parser.add_argument("--learning-rate", type=float, default=0.025)
   parser.add_argument("--momentum", type=float, default=0.9)
-  parser.add_argument("--weight-decay", type=float, default=0.001)
-  parser.add_argument("--gamma", type=float, default=0.96)
+  parser.add_argument("--weight-decay", type=float, default=0)
+  parser.add_argument("--gamma", type=float, default=0.88)
   parser.add_argument("--cell-type", type=str, default="lstm")
 
   parser.add_argument("--num-epoch", type=int, default=20)
   parser.add_argument("--batch-size", type=int, default=64)
   parser.add_argument("--num-workers", type=int, default=32)
 
-  parser.add_argument("--model-save-path", type=str, default="model.pth")
+  parser.add_argument("--model-save-path", type=str, default="modelModified2")
   parser.add_argument("--model-load-path", type=str)
-  parser.add_argument("--log", type=str, default="log.txt")
+  parser.add_argument("--log", type=str, default="logModified")
   args = parser.parse_args()
 
-  args.model_save_path = os.path.join("experiments", args.model_save_path)
-  args.log = open(os.path.join("experiments", args.log), "w")
+  append_string = "_" + str(args.num_attention_layers) + "_" + args.cell_type + "_" + str(args.ans_vocab_size)
+  args.model_load_path = os.path.join("experiments", "model" + append_string + ".pth")
+  args.model_save_path = os.path.join("experiments", args.model_save_path + append_string + ".pth")
+  args.log = open(os.path.join("experiments", args.log + append_string + ".txt"), "w")
   return args
 
 def main(args):
