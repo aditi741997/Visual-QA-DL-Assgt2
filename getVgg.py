@@ -18,10 +18,12 @@ from PIL import Image
 from pprint import pprint
 
 vgg_model = models.vgg19_bn(pretrained=True)
+# pprint(list(vgg_model.children()))
 vgg_model.classifier = nn.Sequential(*list(vgg_model.classifier.children())[:4])
-# pprint(vgg_model.classifier)
+pprint(vgg_model)
 
-BATCH_SIZE = 8
+BATCH_SIZE = 32
+STATUS_FILE = "/home/cse/btech/cs1140485/DeepLearning/Assignment2/Visual-QA-DL-Assgt2/status_sg.txt"
 
 def take_input(data_folder):
     """ returns a data loader """
@@ -70,6 +72,9 @@ def get_vgg(folder, data_loader):
             print('written {}'.format(pathname))
 
 def depreciated(folder):
+    global vgg_model
+    if torch.cuda.is_available():
+	vgg_model = vgg_model.cuda()
     vgg_folder = folder + "_vgg"
     transformer = transforms.Compose([
         transforms.ToPILImage(),
@@ -81,6 +86,8 @@ def depreciated(folder):
     mistakes = 0
     batch = []
     filenames = []
+    print("begin loop")
+    T = time.time()
     for index, image_filename in enumerate(os.listdir(folder)):
         try:
             image = io.imread(os.path.join(folder, image_filename))
@@ -101,13 +108,18 @@ def depreciated(folder):
                 filename = '{}.pkl'.format(input_filenames[local_index])
                 pathname = os.path.join(vgg_folder, filename)
                 with open(pathname, 'wb') as fin:
-                    pickle.dump(output_vector.data.numpy(), fin, protocol=2)
-                print('written {}'.format(pathname))
-        except Exception as ex:
-            print("Screwup @ {}  -------------------- ".format(image_filename))
-            print(ex)
+                    pickle.dump(output_vector.data.cpu().numpy(), fin, protocol=2)
+		with open(STATUS_FILE, 'a') as fout:
+		    fout.write('written {}\n'.format(pathname))
+		    print('written {}'.format(pathname))
+            print("time"+str(time.time()-T))
+	    T = time.time()
+	except Exception as ex:
+	    with open(STATUS_FILE, 'a') as fout:    
+		fout.write("Screwup @ {}  : {}\n".format(image_filename, ex))
+		print("Screwup @ {}  : {}\n".format(image_filename, ex))
             mistakes += 1
-            if False and mistakes == 3: break
+            if False and mistakes == 3: return
     print('mistakes = {}', mistakes)
 
 if __name__ == '__main__':
@@ -115,5 +127,10 @@ if __name__ == '__main__':
         vgg_model = vgg_model.cuda()
     # data_loader = take_input(data_folder = folder)
     # get_vgg(folder = folder, data_loader = data_loader)
-    depreciated(folder="../Data/train2014")
     # get_vgg("/scratch/cse/btech/cs1140485/DL_Course_Data/train2014")
+    folder1 = "/scratch/cse/btech/cs1140485/DL_Course_Data/train2014"
+    folder2 = "/scratch/cse/btech/cs1140485/DL_Course_Data/test2015"
+    folder3 = "/scratch/cse/btech/cs1140485/DL_Course_Data/val2014"
+    depreciated(folder=folder1)
+    depreciated(folder=folder2)
+    depreciated(folder=folder3)

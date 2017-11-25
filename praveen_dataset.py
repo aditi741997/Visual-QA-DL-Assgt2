@@ -8,10 +8,11 @@ from scipy import misc
 from torch.utils.data import Dataset
 from torchvision import transforms
 from skimage import io
+from collections import defaultdict
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
-  def __init__(self, path, loc, batch_size):
+  def __init__(self, path, loc, batch_size, ans_size=1000):
     """Store question list and top 999 answers"""
     self.path = path
     self.loc = loc
@@ -19,26 +20,26 @@ class VQA_Dataset(Dataset):
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict()
     self.qa_map = dict()
-    vocab_answer = pickle.load(open("top1000_answers.pkl", "r"))
+    vocab_answer = pickle.load(open("top{}_answers.pkl".format(ans_size), "r"))
 
     with open(os.path.join(path, "v2_OpenEnded_mscoco_{}_questions.json".format(loc)), "r") as f:
       q_json = json.loads(f.read())
       q_list = q_json["questions"]
-      len_wise_list = [[] for _ in range(2, 23)]
+      len_wise_list = defaultdict(list)
       for x in q_list:
         x["question"] = re.sub("[,.?]", "", x["question"]).split()
-        len_wise_list[len(x["question"]) - 2].append(x)
+        len_wise_list[len(x["question"])].append(x)
       self.batches = []
-      for len_list in len_wise_list:
-        for i in range(0, len(len_list), batch_size):
-          self.batches.append(len_list[i:i+batch_size])
-    
+      for k in len_wise_list:
+        for i in xrange(0, len(len_wise_list[k]), batch_size):
+          self.batches.append(len_wise_list[k][i:i+batch_size])
+
     with open(os.path.join(path, "v2_mscoco_{}_annotations.json".format(loc)), "r") as f:
       a_json = json.loads(f.read())
       for ans in a_json["annotations"]:
         q_id = ans["question_id"]
         ans = ans["multiple_choice_answer"]
-        self.qa_map[q_id] = vocab_answer[ans] if ans in vocab_answer else 0
+        self.qa_map[q_id] = vocab_answer[ans] if ans in vocab_answer else -1
     print("init dataset")
     
     self.transform = transforms.Compose([
@@ -73,11 +74,10 @@ class VQA_Dataset(Dataset):
         map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
         question.append(map(map_fn, q["question"]))
         answer.append(self.qa_map[q["question_id"]])
-      except e:
+      except Exception as e:
         print("Error", e)
         continue
     image_batch = torch.cat(image)
-    print("Batch Len : ", len(question))
     return (image_batch, torch.Tensor(np.array(question)), torch.LongTensor(answer))
 
 

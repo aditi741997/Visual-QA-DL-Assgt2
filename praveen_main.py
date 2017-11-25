@@ -15,7 +15,7 @@ from vqa_base import VQA_Baseline
 # Global variables
 path = "/scratch/cse/btech/cs1140485/DL_Course_Data/"
 GPU = torch.cuda.is_available()
-validation_batch_limit = 500
+validation_batch_limit = 1000
 
 def process_data(data):
   images, questions, answers = data
@@ -66,7 +66,6 @@ def train(model, args, train_dataset, test_dataset):
     model = model.cuda()
 
   for epoch in xrange(args.num_epoch):
-    test_right, test_total, test_unknown, test_time = get_accuracy(model, test_dataloader)
     t1 = time.time()
     scheduler.step()
     torch.save(model, args.model_save_path)
@@ -75,10 +74,11 @@ def train(model, args, train_dataset, test_dataset):
     print('just before')
     for i, data in enumerate(train_dataloader):
       # this is a batch of image-question pairs.
+      bt1 = time.time()
       images, questions, answers = process_data(data)
-      print('just inside')
+      # print('just inside')
       outputs = model(images, questions)
-      print('just outside', outputs)
+      # print('just outside', outputs)
       _, predicts = torch.max(outputs, 1)
       train_total += predicts.size(0)
       train_right += (predicts == answers).sum().data[0]
@@ -89,6 +89,8 @@ def train(model, args, train_dataset, test_dataset):
       total_loss += batch_loss.data[0]
       batch_loss.backward()
       optimizer.step()
+      print "Batch done", time.time() - bt1
+    test_right, test_total, test_unknown, test_time = get_accuracy(model, test_dataloader)
     t2 = time.time()
     log = "Epoch {}, loss {}, train_acc {}, test_acc {}, reduced_train_acc {}, reduced_test_acc {}, time {}, test_time {}".format(
       epoch, 
@@ -110,6 +112,8 @@ def get_arguments():
   parser = argparse.ArgumentParser(description='VQA_Base')
   parser.add_argument("--activation-fn", type=str, default="tanh")
   parser.add_argument("--question-hidden-dim", type=int, default=512)
+  parser.add_argument("--num-attention-layers", type=int, default=1)
+  parser.add_argument("--ans-vocab-size", type=int, default=1000)
 
   parser.add_argument("--learning-rate", type=float, default=0.01)
   parser.add_argument("--momentum", type=float, default=0.9)
@@ -117,8 +121,8 @@ def get_arguments():
   parser.add_argument("--gamma", type=float, default=0.96)
   parser.add_argument("--cell-type", type=str, default="lstm")
 
-  parser.add_argument("--num-epoch", type=int, default=100)
-  parser.add_argument("--batch-size", type=int, default=256)
+  parser.add_argument("--num-epoch", type=int, default=20)
+  parser.add_argument("--batch-size", type=int, default=64)
   parser.add_argument("--num-workers", type=int, default=32)
 
   parser.add_argument("--model-save-path", type=str, default="model.pth")
@@ -135,10 +139,10 @@ def main(args):
     model = torch.load(args.model_load_path)
   else:
     print('right path')
-    model = Stacked_Attention_VQA() #defaults
-  train_dataset = VQA_Dataset(path, "train2014", args.batch_size)
-  # val_dataset = VQA_Dataset(path, "val2014", args.batch_size)
-  print('data set loaded')
+    model = Stacked_Attention_VQA(args.cell_type, output_size=args.ans_vocab_size, num_attention_layers=args.num_attention_layers) #defaults
+  train_dataset = VQA_Dataset(path, "train2014", args.batch_size, args.ans_vocab_size)
+  val_dataset = VQA_Dataset(path, "val2014", args.batch_size, args.ans_vocab_size)
+  print('data sets loaded')
   train(model, args, train_dataset, train_dataset)
 
 if __name__ == '__main__':

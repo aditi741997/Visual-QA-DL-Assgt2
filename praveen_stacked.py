@@ -37,18 +37,25 @@ class ImageEmbeddingExtractor(nn.Module):
         return embedding
 
 class QuestionEmbeddingExtractor(nn.Module):
-    def __init__(self, input_size=300, output_size=1024, batch_first=True):
+    def __init__(self, cell_type="lstm", input_size=300, output_size=1024, batch_first=True):
         super(QuestionEmbeddingExtractor, self).__init__()
         self.input_size = input_size
         self.output_size = output_size
-        self.ques_lstm_1 = nn.LSTM(input_size, output_size, num_layers=1, bidirectional=False, batch_first=True)
+        self.cell_type = cell_type
+        if cell_type == "gru":
+            self.ques_lstm_1 = nn.GRU(input_size, output_size, num_layers=1, bidirectional=False, batch_first=True)
+        else:
+            self.ques_lstm_1 = nn.LSTM(input_size, output_size, num_layers=1, bidirectional=False, batch_first=True)
         self.type = torch.cuda.FloatTensor if is_cuda else torch.FloatTensor
 
     def forward(self, questions):
         batch_sz = questions.data.size()[0]
-        h0 = autograd.Variable(torch.randn(1, batch_sz, self.output_size))
-        c0 = autograd.Variable(torch.randn(1, batch_sz, self.output_size))
-        out_ques_1, (hidden_ques_1, c_ques_1) = self.ques_lstm_1(questions,(h0, c0))
+        h0 = autograd.Variable(torch.randn(1, batch_sz, self.output_size).type(self.type))
+        if self.cell_type != "gru":
+            c0 = autograd.Variable(torch.randn(1, batch_sz, self.output_size).type(self.type))
+            out_ques_1, (hidden_ques_1, c_ques_1) = self.ques_lstm_1(questions,(h0, c0))
+        else:
+            out_ques_1, hidden_ques_1 = self.ques_lstm_1(questions, h0)
         return hidden_ques_1[0]
 
 
@@ -75,6 +82,7 @@ class Attention(nn.Module):
 class Stacked_Attention_VQA(nn.Module):
     
     def __init__(self, 
+            cell_t="lstm",
             image_embedding_size=1024, 
             word_embedding_size=300, 
             question_embedding_size = 1024, 
@@ -83,6 +91,7 @@ class Stacked_Attention_VQA(nn.Module):
         super(Stacked_Attention_VQA, self).__init__()
         self.image_embed = ImageEmbeddingExtractor(output_size=image_embedding_size)
         self.quest_embed = QuestionEmbeddingExtractor(
+                cell_type=cell_t,
                 input_size=word_embedding_size, 
                 output_size=question_embedding_size)
         self.attention_stack = nn.ModuleList([
