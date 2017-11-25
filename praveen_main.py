@@ -125,13 +125,12 @@ def get_arguments():
   parser.add_argument("--batch-size", type=int, default=64)
   parser.add_argument("--num-workers", type=int, default=32)
 
-  parser.add_argument("--model-save-path", type=str, default="modelModified2")
+  parser.add_argument("--model-save-path", type=str, default="model")
   parser.add_argument("--model-load-path", type=str)
-  parser.add_argument("--log", type=str, default="logModified")
+  parser.add_argument("--log", type=str, default="log")
   args = parser.parse_args()
 
   append_string = "_" + str(args.num_attention_layers) + "_" + args.cell_type + "_" + str(args.ans_vocab_size)
-  args.model_load_path = os.path.join("experiments", "model" + append_string + ".pth")
   args.model_save_path = os.path.join("experiments", args.model_save_path + append_string + ".pth")
   args.log = open(os.path.join("experiments", args.log + append_string + ".txt"), "w")
   return args
