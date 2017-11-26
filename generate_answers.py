@@ -9,9 +9,10 @@ def get_topk(paths, no):
 			f_json = json.loads(f.read())
 			for ann in f_json["annotations"]:
 				for answer in ann["answers"]:
-					if answer["answer"] not in answers_count:
-						answers_count[answer["answer"]] = 0
-					answers_count[answer["answer"]] += 1
+					ans = answer["answer"].lower()
+					if ans not in answers_count:
+						answers_count[ans] = 0
+					answers_count[ans] += 1
 	# sort answers based on key
 	out = open("top" + str(no) + "_answers.txt", 'w')
 	str_to_int  = {}
@@ -22,4 +23,4 @@ def get_topk(paths, no):
 		str_to_int[key] = i
 	pickle.dump(str_to_int, out)
 
-get_topk(["../Data/v2_mscoco_val2014_annotations.json", "../Data/v2_mscoco_train2014_annotations.json"], 2000)
+get_topk(["../Data/v2_mscoco_val2014_annotations.json", "../Data/v2_mscoco_train2014_annotations.json"], 3000)
