@@ -1,3 +1,4 @@
+import os
 import torch
 import json
 import pickle
@@ -6,8 +7,10 @@ from praveen_dataset import VQA_Dataset
 from main import process_data
 
 data_path = "/scratch/cse/btech/cs1140485/DL_Course_Data"
-model_path = "/home/cse/btech/cs1140485/DeepLearning/Assignment2/Visual-QA-DL-Assgt2/experiments/model_1_gru_1000.pth"
 loc = "test2015"
+model = "model_1_gru_1000"
+model_path = "/home/cse/btech/cs1140485/DeepLearning/Assignment2/Visual-QA-DL-Assgt2/experiments/{}.pth".format(model)
+result_path = "/home/cse/btech/cs1140485/DeepLearning/Assignment2/san_result_{}_{}.json".format(loc, model)
 batch_size = 64
 GPU = torch.cuda.is_available()
 
@@ -20,13 +23,12 @@ def get_answer_map():
 
 def main():
   answer_map = get_answer_map()
-  print "Yo"
   model = torch.load(model_path)
-  dataset = VQA_Dataset(data_path, loc, batch_size)
+  dataset = VQA_Dataset(data_path, loc, batch_size, 1000, True)
   dataloader = DataLoader(dataset, num_workers=16)
   results_txt = "["
   done_ques_set = set()
-  out_file = open("/home/cse/btech/cs1140205/DL_Assgt2/new/" + "results_2.json", 'w')
+  out_file = open(result_path, 'w')
   for i, data in enumerate(dataloader):
     images, questions, q_ids = process_data(data)
     outputs = model(images, questions)

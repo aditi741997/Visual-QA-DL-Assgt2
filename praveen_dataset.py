@@ -12,10 +12,11 @@ from collections import defaultdict
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
-  def __init__(self, path, loc, batch_size, ans_size=1000):
+  def __init__(self, path, loc, batch_size, ans_size=1000, get_qid=False):
     """Store question list and top 999 answers"""
     self.path = path
     self.loc = loc
+    self.get_qid = get_qid
     self.image_path = os.path.join(path, loc+"_vgg")
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict()
@@ -33,7 +34,16 @@ class VQA_Dataset(Dataset):
       for k in len_wise_list:
         for i in xrange(0, len(len_wise_list[k]), batch_size):
           self.batches.append(len_wise_list[k][i:i+batch_size])
-    if self.loc not in ["train2014", "val2014"]:
+    
+    self.transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Scale(256),
+        transforms.CenterCrop(224), 
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    
+    if self.get_qid:
       return
 
     with open(os.path.join(path, "v2_mscoco_{}_annotations.json".format(loc)), "r") as f:
@@ -43,17 +53,6 @@ class VQA_Dataset(Dataset):
         ans = ans["multiple_choice_answer"]
         self.qa_map[q_id] = vocab_answer[ans] if ans in vocab_answer else -1
     print("init dataset")
-    
-    self.transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Scale(256),
-        transforms.CenterCrop(224), 
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    print("init transform")
-
-
 
   def __len__(self):
     return len(self.batches) 
@@ -69,16 +68,13 @@ class VQA_Dataset(Dataset):
       image_path = os.path.join(raw_image_dir, "COCO_{}_{:012}.jpg".format(self.loc, q["image_id"]))
       if not os.path.isfile(image_path):
         print("File not found: "+ image_path)
-        if self.loc not in ["train2014", "val2014"]:
-          image.append(torch.zeros(1, 3, 224, 224))
-        else:
-          continue
+        continue
       current_image = io.imread(image_path)
       try:
         image.append(torch.unsqueeze(self.transform(current_image), dim=0))
         map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
         question.append(map(map_fn, q["question"]))
-        if self.loc not in ["train2014", "val2014"]:
+        if self.get_qid:
           answer.append(q["question_id"])
         else:
           answer.append(self.qa_map[q["question_id"]])
