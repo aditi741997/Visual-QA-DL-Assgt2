@@ -10,9 +10,10 @@ from collections import defaultdict
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
-  def __init__(self, path, loc, batch_size, no_answers):
+  def __init__(self, path, loc, batch_size, no_answers, get_qid=False):
     """Store question list and top 999 answers"""
     self.loc = loc
+    self.get_qid = get_qid
     self.image_embed_map = {}
     self.image_path = os.path.join(path, loc+"_vgg")
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
@@ -33,7 +34,7 @@ class VQA_Dataset(Dataset):
       for k in len_wise_list:
         for i in xrange(0, len(len_wise_list[k]), batch_size):
           self.batches.append(len_wise_list[k][i:i+batch_size])    
-    if self.loc not in ["train2014", "val2014"]:
+    if self.get_qid:
       return
     with open(os.path.join(path, "v2_mscoco_{}_annotations.json".format(loc)), "r") as f:
       a_json = json.loads(f.read())
@@ -62,13 +63,10 @@ class VQA_Dataset(Dataset):
         self.image_embed_map[image_path] = img_embed
       else: 
         print("File not found: "+image_path)
-        if self.loc not in ["train2014", "val2014"]:
-          image.append(np.zeros((1024)))
-        else:
-          continue
+        continue
       map_fn = lambda x: self.vocab_question[x].type(torch.FloatTensor).numpy() if x in self.vocab_question else np.zeros((300))
       question.append(map(map_fn, q["question"]))
-      if self.loc in ["train2014", "val2014"]:
+      if not self.get_qid:
         answer.append(self.qa_map[q["question_id"]])
       else:
         answer.append(q["question_id"])
