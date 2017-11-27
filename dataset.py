@@ -10,12 +10,13 @@ from collections import defaultdict
 
 class VQA_Dataset(Dataset):
   """Dataset from VQA"""
-  def __init__(self, path, loc, batch_size, no_answers, get_qid=False):
+  def __init__(self, path, loc, batch_size, no_answers, img_embedding_type="vgg", get_qid=False):
     """Store question list and top 999 answers"""
     self.loc = loc
+    self.img_type = img_embedding_type
     self.get_qid = get_qid
     self.image_embed_map = {}
-    self.image_path = os.path.join(path, loc+"_vgg")
+    self.image_path = os.path.join(path, loc + "_" + img_embedding_type)
     self.vocab_question = pickle.load(open("glove_vocab.pkl", "r"))
     # self.vocab_question = dict()
     self.qa_map = dict()
@@ -58,7 +59,11 @@ class VQA_Dataset(Dataset):
       if image_path in self.image_embed_map:
         image.append(self.image_embed_map[image_path])
       elif os.path.isfile(image_path):
-        img_embed = pickle.load(open(image_path, "r"))[0]
+        x = pickle.load(open(image_path, "r"))
+        if self.img_type == "resnet":
+          img_embed = x
+        else:
+          img_embed = x[0]
         image.append(img_embed)
         self.image_embed_map[image_path] = img_embed
       else: 

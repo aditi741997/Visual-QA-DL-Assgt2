@@ -114,6 +114,7 @@ def get_arguments():
   parser.add_argument("--weight-decay", type=float, default=0.00)
   parser.add_argument("--gamma", type=float, default=0.96)
   parser.add_argument("--cell-type", type=str, default="lstm")
+  parser.add_argument("--img-input-dim", type=int, default=4096)
 
   parser.add_argument("--num-epoch", type=int, default=100)
   parser.add_argument("--batch-size", type=int, default=256)
@@ -133,9 +134,10 @@ def main(args):
   if args.model_load_path:
     model = torch.load(args.model_load_path)
   else:
-    model = VQA_Baseline(args.question_hidden_dim, args.activation_fn, args.cell_type, args.no_answers)
-  train_dataset = VQA_Dataset(path, "train2014", args.batch_size, args.no_answers)
-  val_dataset = VQA_Dataset(path, "val2014", args.batch_size, args.no_answers)
+    model = VQA_Baseline(args.question_hidden_dim, args.activation_fn, args.cell_type, args.no_answers, args.img_input_dim)
+  img_embedding_type = "vgg" if args.img_input_dim == 4096 else "resnet"
+  train_dataset = VQA_Dataset(path, "train2014", args.batch_size, args.no_answers, img_embedding_type)
+  val_dataset = VQA_Dataset(path, "val2014", args.batch_size, args.no_answers, img_embedding_type)
   train(model, args, train_dataset, val_dataset)
 
 if __name__ == '__main__':

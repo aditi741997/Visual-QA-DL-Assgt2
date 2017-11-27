@@ -32,3 +32,13 @@ P2
 	0.05 : too high. missing minima.
 	0.025 : 
 	2000 -> parameters increase a lot, slow learning, so didnt do so well.
+
+
+challenge:
+resnet with p1.
+REMOVE BREAK
+	resnet | 3000 | lr=0.04 | gru | tanh | gamma 0.96 1
+	resnet | 2000 | lr=0.04 | gru | tanh | gamma 0.96 2
+	resnet | 1000 | lr=0.04 | gru | tanh | gamma 0.96 3
+	resnet | 3000 | lr=0.05 | gru | tanh | gamma 0.96 4
+

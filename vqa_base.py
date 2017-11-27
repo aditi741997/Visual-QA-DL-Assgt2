@@ -10,11 +10,11 @@ linear_dim = 1000
 class VQA_Baseline(nn.Module):
 	"""
 		VQA baseline model
-		Takes 4096 dim embedding of image from vggnet.
+		Takes 4096 dim embedding of image from vggnet. (or 2048 from resnet.)
 		Takes 300 dim embedding of question from glove
 		Returns logit over 1000 most frequent answers
 	"""
-	def __init__(self, hidden_size, activation_fn, gru, no_answers, bidi=False):
+	def __init__(self, hidden_size, activation_fn, gru, no_answers, img_input_dim, bidi=False):
 		"""Args
 			hidden_size : size of hidden dim of LSTM
 			activation_fn : one of "relu" or "tanh"
@@ -23,7 +23,7 @@ class VQA_Baseline(nn.Module):
 
 		self.activation_fn = activation_fn
 		self.hidden_size = hidden_size
-		self.img_linear = nn.Linear(4096, img_ques_dim)
+		self.img_linear = nn.Linear(img_input_dim, img_ques_dim)
 		self.cell_type = gru
 		if self.cell_type == "gru":
 			self.ques_rnn_1 = nn.GRU(300, hidden_size, num_layers=1, batch_first=True)
